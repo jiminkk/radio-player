@@ -183,6 +183,23 @@
         display: none;
       }
 
+      .loading {
+        font-size: 0.8rem;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+      .loading:empty {
+        display: none;
+      }
+      /* animated ellipsis after "connecting", same style as the history header */
+      .loading::after {
+        content: "";
+        display: inline-block;
+        width: 1.1em;
+        text-align: left;
+        animation: ellipsis 1.6s steps(1, end) infinite;
+      }
+
       /* ---------- Play history ---------- */
       .history {
         position: fixed;
@@ -599,6 +616,7 @@
       </div>
 
       <div class="radio-container">
+        <div class="loading" id="loading"></div>
         <div class="station-name" id="stationName">
           Hover anywhere to start…
         </div>
@@ -676,10 +694,7 @@
       </button>
     </div>
 
-    <footer class="footer">
-      Tune in. is a global radio station roulette. Discover your next favorite
-      radio station! Made with love for music worldwide <3
-    </footer>
+    <footer class="footer"></footer>
 
     <script>
       // Radio Browser mirrors — we try them in order if one is down.
@@ -695,6 +710,7 @@
         vinyl: document.querySelector(".vinyl"),
         vinylArt: document.querySelector(".vinyl-art"),
         stationName: document.getElementById("stationName"),
+        loading: document.getElementById("loading"),
         meta: document.getElementById("meta"),
         nowPlaying: document.getElementById("nowPlaying"),
         playBtn: document.getElementById("playBtn"),
@@ -873,7 +889,10 @@
         const wasPlaying = !els.player.paused
         switchingStation = true
         els.player.src = s.url_resolved
-        if (wasPlaying || play) els.player.play().catch(() => {})
+        if (wasPlaying || play) {
+          setLoading(true)
+          els.player.play().catch(() => {})
+        }
         countClick(s.stationuuid)
         startNowPlaying(s.url_resolved)
         addHistory(s.name)
@@ -1312,8 +1331,15 @@
         vinyl.style.transform = `rotate(${deg + 18}deg)`
       }
 
+      // Show "loading…" while the player is trying to play but no audio is
+      // coming through yet (buffering / still connecting to the stream).
+      function setLoading(on) {
+        els.loading.textContent = on ? "connecting" : ""
+      }
+
       els.player.addEventListener("playing", () => {
         switchingStation = false
+        setLoading(false) // real audio is flowing now
         clearTimeout(autoSkipTimer) // a stream is playing — cancel any auto-skip
         // Only spin up from rest if the disc is currently stopped. If it's
         // already spinning (e.g. switching stations), leave it untouched so it
@@ -1332,10 +1358,16 @@
         }
         stallToStop(els.vinyl, els.turntable)
         els.playBtn.textContent = "▶"
+        setLoading(false)
         syncMiniPlayer()
+      })
+      // Buffering / connecting: surface "loading…" while we're trying to play.
+      els.player.addEventListener("waiting", () => {
+        if (!els.player.paused) setLoading(true)
       })
       els.player.addEventListener("error", () => {
         switchingStation = false
+        setLoading(false)
         setMessage("That stream wouldn't play. Finding another…", true)
         stallToStop(els.vinyl, els.turntable)
         // Auto-skip to another random station shortly. Clear any pending skip
@@ -1345,8 +1377,12 @@
       })
 
       function togglePlay() {
-        if (els.player.paused) els.player.play().catch(() => {})
-        else els.player.pause()
+        if (els.player.paused) {
+          setLoading(true)
+          els.player.play().catch(() => {})
+        } else {
+          els.player.pause()
+        }
       }
       els.playBtn.addEventListener("click", togglePlay)
       els.vinylArt.addEventListener("click", togglePlay)
