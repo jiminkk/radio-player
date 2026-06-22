@@ -89,6 +89,10 @@
         display: grid;
         gap: 34px;
       }
+      .radio-container {
+        display: grid;
+        gap: 16px;
+      }
       /* ---------- Turntable ---------- */
       @keyframes sway {
         0%,
@@ -161,26 +165,25 @@
         justify-content: center;
         gap: 6px;
       }
-      .station-link {
-        display: inline-flex;
-        align-items: center;
-        flex-shrink: 0;
-        color: var(--text);
-        transition: color 0.15s ease;
+      /* small "source radio" link in the footer */
+      .source-link {
+        display: inline-block;
+        font-size: 0.7rem;
+        color: var(--muted);
+        text-decoration: none;
       }
-      .station-link:hover {
+      .source-link:hover {
         color: var(--text);
+        text-decoration: underline;
       }
-      .station-link[hidden] {
+      .source-link[hidden] {
         display: none;
       }
-
       .meta {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
         justify-content: center;
-        margin-top: 8px;
       }
 
       .chip {
@@ -212,7 +215,7 @@
       .loading {
         font-size: 0.8rem;
         color: var(--muted);
-        margin-bottom: 4px;
+        margin-bottom: 7px;
       }
       .loading:empty {
         display: none;
@@ -289,12 +292,14 @@
         margin: 0;
       }
       .history-item {
-        display: inline-flex;
+        display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 3px;
       }
       .history-name {
-        flex: 1;
+        /* size to the text (don't fill the row) so the star sits right after
+           it; still shrink + ellipsis when the name is too long */
+        flex: 0 1 auto;
         min-width: 0;
         overflow: hidden;
         white-space: nowrap;
@@ -358,7 +363,6 @@
         display: flex;
         gap: 12px;
         justify-content: center;
-        margin-top: 22px;
       }
 
       .ctrl {
@@ -646,6 +650,9 @@
           width: min(70vw, 60vh, 320px);
           height: auto;
         }
+        .radio-container {
+          gap: 10px;
+        }
       }
       @media (max-height: 880px) {
         .footer {
@@ -664,7 +671,7 @@
           width: 100%;
           text-align: center;
           order: 1;
-          margin-top: 28px;
+          margin-top: 87px;
         }
         .footer {
           margin-top: 50px;
@@ -722,32 +729,6 @@
                 ></polygon>
               </svg>
             </button>
-            <a
-              class="station-link"
-              id="stationLink"
-              title="Visit station website"
-              aria-label="Visit station website"
-              target="_blank"
-              rel="noopener noreferrer"
-              hidden
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M15 3h6v6" />
-                <path d="M10 14 21 3" />
-                <path
-                  d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
-                />
-              </svg>
-            </a>
           </div>
           <div class="meta" id="meta"></div>
           <div class="now-playing" id="nowPlaying"></div>
@@ -826,7 +807,16 @@
       </button>
     </div>
 
-    <footer class="footer"></footer>
+    <footer class="footer">
+      <a
+        class="source-link"
+        id="sourceLink"
+        target="_blank"
+        rel="noopener noreferrer"
+        hidden
+        >source radio</a
+      >
+    </footer>
 
     <script>
       // Radio Browser mirrors — we try them in order if one is down.
@@ -842,7 +832,7 @@
         vinyl: document.querySelector(".vinyl"),
         vinylArt: document.querySelector(".vinyl-art"),
         stationName: document.getElementById("stationName"),
-        stationLink: document.getElementById("stationLink"),
+        sourceLink: document.getElementById("sourceLink"),
         favBtn: document.getElementById("favBtn"),
         loading: document.getElementById("loading"),
         meta: document.getElementById("meta"),
@@ -994,8 +984,8 @@
       function setMessage(msg, isError = false) {
         els.stationName.innerHTML = `<span class="status${isError ? " error" : ""}">${msg}</span>`
         els.meta.innerHTML = ""
-        els.stationLink.hidden = true // no website link during status messages
-        els.favBtn.hidden = true // and no favorite star during status messages
+        els.favBtn.hidden = true // no favorite star during status messages
+        els.sourceLink.hidden = true // and no "source radio" link
       }
 
       function renderStation(s, { play = false } = {}) {
@@ -1008,14 +998,15 @@
           .style.setProperty("--vinyl-base", vinyl.hex)
 
         els.stationName.textContent = s.name || "Unknown station"
-        // Show the external-link icon when the station has a website.
+        // Show the "source radio" link when the station has a website.
         const homepage = (s.homepage || "").trim()
-        if (/^https?:\/\//i.test(homepage)) {
-          els.stationLink.href = homepage
-          els.stationLink.hidden = false
+        const hasSite = /^https?:\/\//i.test(homepage)
+        if (hasSite) {
+          els.sourceLink.href = homepage
+          els.sourceLink.hidden = false
         } else {
-          els.stationLink.removeAttribute("href")
-          els.stationLink.hidden = true
+          els.sourceLink.removeAttribute("href")
+          els.sourceLink.hidden = true
         }
 
         const bits = []
