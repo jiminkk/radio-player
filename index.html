@@ -21,6 +21,8 @@
         --accent: #f8f2dc;
         --accent-2: #1f9e8a;
         --border: #e3dfd5;
+        /* filled part of the volume slider: same hue as the knob, but lighter */
+        --volume-fill: rgba(43, 42, 38, 0.5);
         --radius: 16px;
       }
 
@@ -83,6 +85,10 @@
         margin-top: 24px;
       }
 
+      .vinyl-container {
+        display: grid;
+        gap: 34px;
+      }
       /* ---------- Turntable ---------- */
       @keyframes sway {
         0%,
@@ -147,6 +153,26 @@
         line-clamp: 3;
         -webkit-box-orient: vertical;
         overflow: hidden;
+      }
+
+      .station-name-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+      .station-link {
+        display: inline-flex;
+        align-items: center;
+        flex-shrink: 0;
+        color: var(--text);
+        transition: color 0.15s ease;
+      }
+      .station-link:hover {
+        color: var(--text);
+      }
+      .station-link[hidden] {
+        display: none;
       }
 
       .meta {
@@ -261,9 +287,64 @@
 
       .history-list p {
         margin: 0;
-        white-space: nowrap;
+      }
+      .history-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .history-name {
+        flex: 1;
+        min-width: 0;
         overflow: hidden;
+        white-space: nowrap;
         text-overflow: ellipsis;
+        text-align: left;
+      }
+      /* clickable (replayable) names render as text buttons */
+      button.history-name {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+      }
+      button.history-name:hover {
+        color: var(--text);
+        text-decoration: underline;
+      }
+      .fav[disabled],
+      .fav[hidden] {
+        display: none;
+      }
+      .fav {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        padding: 0;
+        margin: 0;
+        border: 0;
+        background: none;
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .fav svg {
+        width: 13px;
+        height: 13px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linejoin: round;
+      }
+      .fav:hover {
+        color: var(--text);
+      }
+      .fav.is-fav {
+        color: var(--text);
+      }
+      .fav.is-fav svg {
+        fill: currentColor;
       }
       .history:empty {
         display: none;
@@ -344,7 +425,12 @@
         width: 90px;
         height: 6px;
         border-radius: 999px;
-        background: var(--panel);
+        /* shade the portion left of the knob to show the volume level */
+        background: linear-gradient(
+          to right,
+          var(--volume-fill) var(--fill, 80%),
+          var(--panel) var(--fill, 80%)
+        );
         cursor: pointer;
         outline: none;
       }
@@ -604,51 +690,50 @@
     <div class="app">
       <h1>tune in.</h1>
 
-      <div class="turntable" id="turntable">
-        <div class="vinyl">
-          <img
-            class="vinyl-art"
-            src="svg/vinyl.svg"
-            alt="Spinning vinyl record"
-            draggable="false"
-          />
+      <div class="vinyl-container">
+        <div class="turntable" id="turntable">
+          <div class="vinyl">
+            <img
+              class="vinyl-art"
+              src="svg/vinyl.svg"
+              alt="Spinning vinyl record"
+              draggable="false"
+            />
+          </div>
         </div>
-      </div>
 
-      <div class="radio-container">
-        <div class="loading" id="loading"></div>
-        <div class="station-name" id="stationName">
-          Hover anywhere to start…
-        </div>
-        <div class="meta" id="meta"></div>
-        <div class="now-playing" id="nowPlaying"></div>
-
-        <div class="controls">
-          <div class="volume-control">
-            <div class="volume-popup">
-              <div class="volume-popup-inner">
-                <input
-                  type="range"
-                  class="volume"
-                  id="volume"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value="0.8"
-                  title="Volume"
-                  aria-label="Volume"
-                />
-              </div>
+        <div class="radio-container">
+          <div class="loading" id="loading"></div>
+          <div class="station-name-row">
+            <div class="station-name" id="stationName">
+              Hover anywhere to start…
             </div>
             <button
-              class="ctrl"
-              id="volumeBtn"
-              title="Volume"
-              aria-label="Volume"
+              class="fav"
+              id="favBtn"
+              type="button"
+              title="Favorite"
+              aria-label="Toggle favorite"
+              hidden
+            >
+              <svg viewBox="0 0 24 24">
+                <polygon
+                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                ></polygon>
+              </svg>
+            </button>
+            <a
+              class="station-link"
+              id="stationLink"
+              title="Visit station website"
+              aria-label="Visit station website"
+              target="_blank"
+              rel="noopener noreferrer"
+              hidden
             >
               <svg
-                width="22"
-                height="22"
+                width="14"
+                height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -656,15 +741,62 @@
                 stroke-linecap="round"
                 stroke-linejoin="round"
               >
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M15 3h6v6" />
+                <path d="M10 14 21 3" />
                 <path
-                  d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"
-                ></path>
+                  d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+                />
               </svg>
-            </button>
+            </a>
           </div>
-          <button class="ctrl play" id="playBtn" title="Play / pause">▶</button>
-          <button class="ctrl" id="nextBtn" title="Next station">⏭</button>
+          <div class="meta" id="meta"></div>
+          <div class="now-playing" id="nowPlaying"></div>
+
+          <div class="controls">
+            <div class="volume-control">
+              <div class="volume-popup">
+                <div class="volume-popup-inner">
+                  <input
+                    type="range"
+                    class="volume"
+                    id="volume"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value="0.8"
+                    title="Volume"
+                    aria-label="Volume"
+                  />
+                </div>
+              </div>
+              <button
+                class="ctrl"
+                id="volumeBtn"
+                title="Volume"
+                aria-label="Volume"
+              >
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <path
+                    d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+            <button class="ctrl play" id="playBtn" title="Play / pause">
+              ▶
+            </button>
+            <button class="ctrl" id="nextBtn" title="Next station">⏭</button>
+          </div>
         </div>
       </div>
 
@@ -710,6 +842,8 @@
         vinyl: document.querySelector(".vinyl"),
         vinylArt: document.querySelector(".vinyl-art"),
         stationName: document.getElementById("stationName"),
+        stationLink: document.getElementById("stationLink"),
+        favBtn: document.getElementById("favBtn"),
         loading: document.getElementById("loading"),
         meta: document.getElementById("meta"),
         nowPlaying: document.getElementById("nowPlaying"),
@@ -818,6 +952,8 @@
       let switchingStation = false
       // Pending auto-skip after a stream fails to play (see the error handler).
       let autoSkipTimer = null
+      // The station currently loaded on the page (for the now-playing star).
+      let currentStation = null
 
       async function fetchRandomStation() {
         const params = new URLSearchParams({
@@ -858,10 +994,13 @@
       function setMessage(msg, isError = false) {
         els.stationName.innerHTML = `<span class="status${isError ? " error" : ""}">${msg}</span>`
         els.meta.innerHTML = ""
+        els.stationLink.hidden = true // no website link during status messages
+        els.favBtn.hidden = true // and no favorite star during status messages
       }
 
       function renderStation(s, { play = false } = {}) {
         triedStations.add(s.stationuuid)
+        currentStation = s
         const labelHex = deriveLabelColor(s.name)
         const vinyl = pickVinylColor(labelHex, "contrast")
         document
@@ -869,6 +1008,15 @@
           .style.setProperty("--vinyl-base", vinyl.hex)
 
         els.stationName.textContent = s.name || "Unknown station"
+        // Show the external-link icon when the station has a website.
+        const homepage = (s.homepage || "").trim()
+        if (/^https?:\/\//i.test(homepage)) {
+          els.stationLink.href = homepage
+          els.stationLink.hidden = false
+        } else {
+          els.stationLink.removeAttribute("href")
+          els.stationLink.hidden = true
+        }
 
         const bits = []
         if (s.country) bits.push(s.country)
@@ -895,26 +1043,82 @@
         }
         countClick(s.stationuuid)
         startNowPlaying(s.url_resolved)
-        addHistory(s.name)
+        addHistory(s)
         syncMiniPlayer()
+        syncFavUI()
       }
 
-      // ---------- Play history (localStorage) ----------
+      // ---------- Play history + favorites (localStorage) ----------
       const HISTORY_KEY = "radioHistory"
+      const FAVORITES_KEY = "radioFavorites"
       let history = loadHistory()
+      let favorites = loadFavorites()
+
+      // Star icon (outline by default; filled via CSS when favorited)
+      const STAR_SVG =
+        '<svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>'
 
       function loadHistory() {
         try {
-          return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []
+          const raw = JSON.parse(localStorage.getItem(HISTORY_KEY)) || []
+          // Migrate the old format (array of name strings) to station objects.
+          return raw.map((e) => (typeof e === "string" ? { name: e } : e))
         } catch (_) {
           return []
         }
       }
 
-      function addHistory(name) {
-        if (!name) return
-        if (history[0] === name) return // skip consecutive duplicates
-        history.unshift(name)
+      function loadFavorites() {
+        try {
+          return new Set(JSON.parse(localStorage.getItem(FAVORITES_KEY)) || [])
+        } catch (_) {
+          return new Set()
+        }
+      }
+
+      function toggleFavorite(id) {
+        if (!id) return
+        if (favorites.has(id)) favorites.delete(id)
+        else favorites.add(id)
+        try {
+          localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favorites]))
+        } catch (_) {}
+        renderHistory()
+        syncFavUI()
+      }
+
+      // Reflect the current station's favorite state on the now-playing star
+      // (main page) and the mini player star.
+      function syncFavUI() {
+        const id = currentStation && currentStation.stationuuid
+        const on = !!id && favorites.has(id)
+        els.favBtn.hidden = !id
+        els.favBtn.classList.toggle("is-fav", on)
+        els.favBtn.setAttribute("aria-pressed", String(on))
+        if (pipWindow) {
+          const mf = pipWindow.document.getElementById("miniFav")
+          if (mf) {
+            mf.hidden = !id
+            mf.classList.toggle("is-fav", on)
+            mf.setAttribute("aria-pressed", String(on))
+          }
+        }
+      }
+
+      function addHistory(s) {
+        if (!s || !s.stationuuid) return
+        // keep each station once: drop any existing entry, then add to the top
+        // so the most recently played always surfaces first
+        history = history.filter((h) => h.stationuuid !== s.stationuuid)
+        history.unshift({
+          stationuuid: s.stationuuid,
+          name: s.name,
+          url_resolved: s.url_resolved,
+          homepage: s.homepage,
+          country: s.country,
+          bitrate: s.bitrate,
+          tags: s.tags,
+        })
         if (history.length > 50) history.length = 50
         try {
           localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
@@ -931,8 +1135,90 @@
         el.innerHTML =
           `<h2>Recently played</h2>` +
           `<div class="history-list">` +
-          history.map((n) => `<p>${escapeHtml(n)}</p>`).join("") +
+          history
+            .map((entry) => {
+              const id = entry.stationuuid || ""
+              const fav = !!id && favorites.has(id)
+              const safe = escapeHtml(entry.name || "Unknown")
+              const playable = !!(id && entry.url_resolved)
+              const star =
+                `<button class="fav${fav ? " is-fav" : ""}" data-uuid="${escapeHtml(id)}"` +
+                `${id ? "" : " disabled"} aria-pressed="${fav}" aria-label="Toggle favorite" title="Favorite">` +
+                STAR_SVG +
+                `</button>`
+              const name = playable
+                ? `<button class="history-name" data-uuid="${escapeHtml(id)}" title="Play ${safe}">${safe}</button>`
+                : `<span class="history-name">${safe}</span>`
+              return `<p class="history-item">${name}${star}</p>`
+            })
+            .join("") +
           `</div>`
+      }
+
+      // Delegated history clicks (the list is re-rendered on every change, but
+      // #history itself persists). Star toggles favorite; name replays.
+      document.getElementById("history").addEventListener("click", (e) => {
+        const star = e.target.closest(".fav")
+        if (star) {
+          toggleFavorite(star.dataset.uuid)
+          return
+        }
+        const name = e.target.closest("button.history-name")
+        if (name) {
+          const entry = history.find((h) => h.stationuuid === name.dataset.uuid)
+          if (entry) renderStation(entry, { play: true })
+        }
+      })
+
+      // Look up a station by exact name (case-insensitive) with an https stream.
+      // Returns null rather than guessing, so we never backfill the wrong one.
+      async function findStationByName(name) {
+        const params = new URLSearchParams({
+          name,
+          hidebroken: "true",
+          is_https: "true",
+          order: "clickcount",
+          reverse: "true",
+          limit: "10",
+        })
+        const target = name.trim().toLowerCase()
+        for (const base of SERVERS) {
+          const list = await fetchJson(`${base}/json/stations/search?${params}`)
+          if (!Array.isArray(list)) continue
+          const match = list.find(
+            (s) =>
+              (s.name || "").trim().toLowerCase() === target &&
+              s.url_resolved &&
+              s.url_resolved.startsWith("https"),
+          )
+          if (match) return match
+        }
+        return null
+      }
+
+      // Best-effort: upgrade any legacy (name-only) history entries to the full
+      // station format so they become clickable + favoritable.
+      async function backfillHistory() {
+        const legacy = history.filter((e) => e && !e.stationuuid && e.name)
+        if (!legacy.length) return
+        let changed = false
+        for (const entry of legacy) {
+          const s = await findStationByName(entry.name)
+          if (!s) continue
+          entry.stationuuid = s.stationuuid
+          entry.url_resolved = s.url_resolved
+          entry.homepage = s.homepage
+          entry.country = s.country
+          entry.bitrate = s.bitrate
+          entry.tags = s.tags
+          changed = true
+        }
+        if (changed) {
+          try {
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
+          } catch (_) {}
+          renderHistory()
+        }
       }
 
       // ------ MINI POP UP -------
@@ -973,16 +1259,45 @@
           animation: none;
           transition: transform 0.5s cubic-bezier(0.5, 1, 0.89, 1);
         }
+        .mini-name-row {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          max-width: 100%;
+        }
         .mini-name {
           font-size: 0.9rem;
           font-weight: 600;
           text-align: center;
-          max-width: 100%;
+          min-width: 0;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-          padding: 0 8px;
+          padding: 0 0 0 8px;
         }
+        .fav {
+          flex-shrink: 0;
+          display: inline-flex;
+          align-items: center;
+          padding: 0;
+          border: 0;
+          background: none;
+          color: #8a877d;
+          cursor: pointer;
+        }
+        .fav[hidden] { display: none; }
+        .fav svg {
+          width: 14px;
+          height: 14px;
+          fill: none;
+          stroke: currentColor;
+          stroke-width: 2;
+          stroke-linejoin: round;
+        }
+        .fav:hover,
+        .fav.is-fav { color: #2b2a26; }
+        .fav.is-fav svg { fill: currentColor; }
         .mini-controls { display: flex; gap: 8px; }
         .mini-ctrl {
           font: inherit;
@@ -1032,7 +1347,11 @@
           width: 64px;
           height: 6px;
           border-radius: 999px;
-          background: #f4f2ec;
+          background: linear-gradient(
+            to right,
+            rgba(43, 42, 38, 0.5) var(--fill, 80%),
+            #f4f2ec var(--fill, 80%)
+          );
           cursor: pointer;
           outline: none;
         }
@@ -1058,7 +1377,12 @@
 
       const MINI_HTML = `
         <div class="mini-vinyl" id="miniVinyl"></div>
-        <div class="mini-name" id="miniName">tune in.</div>
+        <div class="mini-name-row">
+          <div class="mini-name" id="miniName">tune in.</div>
+          <button class="fav" id="miniFav" type="button" title="Favorite" aria-label="Toggle favorite" hidden>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          </button>
+        </div>
         <div class="mini-controls">
           <div class="volume-control">
             <div class="volume-popup">
@@ -1116,6 +1440,11 @@
           pipWindow.document
             .getElementById("miniNext")
             .addEventListener("click", nextStation)
+          pipWindow.document
+            .getElementById("miniFav")
+            .addEventListener("click", () => {
+              if (currentStation) toggleFavorite(currentStation.stationuuid)
+            })
 
           // Volume controls in the PiP mirror the main ones.
           const miniVolume = pipWindow.document.getElementById("miniVolume")
@@ -1130,6 +1459,7 @@
             miniVolumeBtn.blur()
           })
           syncVolumeUI()
+          syncFavUI()
 
           pipWindow.addEventListener("pagehide", () => {
             pipWindow = null
@@ -1387,6 +1717,9 @@
       els.playBtn.addEventListener("click", togglePlay)
       els.vinylArt.addEventListener("click", togglePlay)
       els.nextBtn.addEventListener("click", nextStation)
+      els.favBtn.addEventListener("click", () => {
+        if (currentStation) toggleFavorite(currentStation.stationuuid)
+      })
 
       // ---------- Volume + mute ----------
       const VOLUME_ICON =
@@ -1404,7 +1737,9 @@
         btn.querySelector("svg").innerHTML = off ? MUTED_ICON : VOLUME_ICON
         // Reflect mute in the slider: drop to 0 when muted, restore the
         // underlying volume when unmuted.
-        slider.value = els.player.muted ? 0 : els.player.volume
+        const level = els.player.muted ? 0 : els.player.volume
+        slider.value = level
+        slider.style.setProperty("--fill", level * 100 + "%")
       }
 
       // Sync the main page and (if open) the mini player volume controls.
@@ -1529,6 +1864,8 @@
 
       // Show any history saved from previous sessions.
       renderHistory()
+      // Upgrade old name-only entries to the full format in the background.
+      backfillHistory()
 
       // Load a station so there's something ready — it stays paused until the
       // user clicks the vinyl or the play button.
