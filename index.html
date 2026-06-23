@@ -3,13 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>station generator</title>
+    <title>tune in.</title>
+    <link rel="icon" type="image/svg+xml" href="svg/vinyl-alt.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Rubik+Microbe&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap"
       rel="stylesheet"
     />
+
     <style>
       :root {
         --bg: #f9f5e3;
@@ -23,6 +25,7 @@
         --border: #e3dfd5;
         /* filled part of the volume slider: same hue as the knob, but lighter */
         --volume-fill: rgba(43, 42, 38, 0.5);
+        --star: #f4c430; /* favorited-star yellow */
         --radius: 16px;
       }
 
@@ -79,10 +82,17 @@
         position: fixed;
         bottom: 10px;
         color: var(--muted);
-        opacity: 0.6;
         font-size: 0.75rem;
         text-align: center;
         margin-top: 24px;
+      }
+      /* icon shown in the footer only on mobile (see media query) */
+      .footer-icon {
+        display: none;
+        width: 64px;
+        height: auto;
+        margin: 0 auto 8px;
+        user-select: none;
       }
 
       .vinyl-container {
@@ -171,10 +181,12 @@
         font-size: 0.7rem;
         color: var(--muted);
         text-decoration: none;
+        opacity: 0.6;
       }
       .source-link:hover {
         color: var(--text);
         text-decoration: underline;
+        opacity: 1;
       }
       .source-link[hidden] {
         display: none;
@@ -239,10 +251,22 @@
         flex-direction: column;
         width: 200px;
         color: var(--muted);
-        opacity: 0.6;
         font-size: 0.78rem;
         line-height: 1.65;
         text-align: left;
+      }
+      /* fade the text (not the icon — it's a sibling, so it stays full color) */
+      .history h2,
+      .history-list {
+        opacity: 0.6;
+      }
+
+      .history-icon {
+        flex-shrink: 0;
+        width: 50%;
+        display: block;
+        margin-bottom: 12px;
+        user-select: none;
       }
 
       .history h2 {
@@ -346,7 +370,7 @@
         color: var(--text);
       }
       .fav.is-fav {
-        color: var(--text);
+        color: var(--star);
       }
       .fav.is-fav svg {
         fill: currentColor;
@@ -673,6 +697,13 @@
           order: 1;
           margin-top: 87px;
         }
+        /* on mobile the icon moves down to the footer instead */
+        .history-icon {
+          display: none;
+        }
+        .footer-icon {
+          display: block;
+        }
         .footer {
           margin-top: 50px;
           position: relative;
@@ -808,6 +839,7 @@
     </div>
 
     <footer class="footer">
+      <img class="footer-icon" src="svg/vinyl-alt.svg" alt="" draggable="false" />
       <a
         class="source-link"
         id="sourceLink"
@@ -1124,6 +1156,7 @@
           return
         }
         el.innerHTML =
+          `<img class="history-icon" src="svg/vinyl-alt.svg" alt="" draggable="false" />` +
           `<h2>Recently played</h2>` +
           `<div class="history-list">` +
           history
@@ -1287,7 +1320,7 @@
           stroke-linejoin: round;
         }
         .fav:hover,
-        .fav.is-fav { color: #2b2a26; }
+        .fav.is-fav { color: #f4c430; }
         .fav.is-fav svg { fill: currentColor; }
         .mini-controls { display: flex; gap: 8px; }
         .mini-ctrl {
@@ -1408,6 +1441,8 @@
             .forEach((l) =>
               pipWindow.document.head.appendChild(l.cloneNode(true)),
             )
+
+          pipWindow.document.title = "tune in."
 
           const style = pipWindow.document.createElement("style")
           style.textContent = MINI_CSS
