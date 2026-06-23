@@ -71,6 +71,7 @@
       }
 
       h1 {
+        font-family: "Bungee Inline", "Rubik", sans-serif;
         font-size: 1.9rem;
         margin: 0 0 28px;
         letter-spacing: -0.5px;
@@ -101,7 +102,7 @@
       }
       .radio-container {
         display: grid;
-        gap: 16px;
+        gap: 9px;
       }
       /* ---------- Turntable ---------- */
       @keyframes sway {
@@ -185,7 +186,6 @@
       }
       .source-link:hover {
         color: var(--text);
-        text-decoration: underline;
         opacity: 1;
       }
       .source-link[hidden] {
@@ -232,14 +232,6 @@
       .loading:empty {
         display: none;
       }
-      /* animated ellipsis after "connecting", same style as the history header */
-      .loading::after {
-        content: "";
-        display: inline-block;
-        width: 1.1em;
-        text-align: left;
-        animation: ellipsis 1.6s steps(1, end) infinite;
-      }
 
       /* ---------- Play history ---------- */
       .history {
@@ -254,6 +246,12 @@
         font-size: 0.78rem;
         line-height: 1.65;
         text-align: left;
+        /* both lists (favorites + recently played) scroll together */
+        overflow-y: auto;
+        scrollbar-width: none;
+      }
+      .history::-webkit-scrollbar {
+        display: none;
       }
       /* fade the text (not the icon — it's a sibling, so it stays full color) */
       .history h2,
@@ -274,42 +272,15 @@
         font-size: 0.68rem;
         text-transform: uppercase;
         letter-spacing: 0.06em;
-        margin: 0 0 12px;
+        margin: 0 0 8px;
         font-weight: 500;
       }
-      /* animate the trailing ellipsis: build up one dot at a time, then loop.
-         Reserve a fixed-width, left-aligned box for the dots so the title text
-         doesn't shift as they're added (matters when the title is centered). */
-      .history h2::after {
-        content: "";
-        display: inline-block;
-        width: 1.1em;
-        text-align: left;
-        animation: ellipsis 1.6s steps(1, end) infinite;
-      }
-      @keyframes ellipsis {
-        0% {
-          content: "";
-        }
-        25% {
-          content: ".";
-        }
-        50% {
-          content: "..";
-        }
-        75% {
-          content: "...";
-        }
-      }
-
       .history-list {
-        flex: 1;
-        min-height: 0;
-        overflow-y: auto;
-        scrollbar-width: none;
+        /* spacing below each list (before the next header / footer) */
+        margin-bottom: 14px;
       }
-      .history-list::-webkit-scrollbar {
-        display: none;
+      .history-list:last-child {
+        margin-bottom: 0;
       }
 
       .history-list p {
@@ -341,7 +312,7 @@
       }
       button.history-name:hover {
         color: var(--text);
-        text-decoration: underline;
+        text-decoration: none;
       }
       .fav[disabled],
       .fav[hidden] {
@@ -387,6 +358,7 @@
         display: flex;
         gap: 12px;
         justify-content: center;
+        margin-top: 6px;
       }
 
       .ctrl {
@@ -613,9 +585,9 @@
         height: 14px;
       }
       .popout-btn:hover {
-        color: var(--muted);
+        color: var(--text);
         font-weight: 400;
-        border: 1px solid var(--border);
+        /* border: 1px solid var(--border); */
       }
       .popout-btn:active {
         transform: scale(0.92);
@@ -700,6 +672,10 @@
         /* on mobile the icon moves down to the footer instead */
         .history-icon {
           display: none;
+        }
+        /* center the favorite + recently-played rows */
+        .history-item {
+          justify-content: center;
         }
         .footer-icon {
           display: block;
@@ -839,7 +815,12 @@
     </div>
 
     <footer class="footer">
-      <img class="footer-icon" src="svg/vinyl-alt.svg" alt="" draggable="false" />
+      <img
+        class="footer-icon"
+        src="svg/vinyl-alt.svg"
+        alt=""
+        draggable="false"
+      />
       <a
         class="source-link"
         id="sourceLink"
@@ -1091,21 +1072,75 @@
         }
       }
 
+      // Real Radio Browser ids look like "9617a958-0601-11e8-ae97-52543be04c81".
+      function isUuid(s) {
+        return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          s || "",
+        )
+      }
+
+      // Favorites are stored as full station objects (keyed by uuid) so they
+      // persist independently of the capped history.
       function loadFavorites() {
         try {
-          return new Set(JSON.parse(localStorage.getItem(FAVORITES_KEY)) || [])
+          const raw = JSON.parse(localStorage.getItem(FAVORITES_KEY)) || []
+          const map = new Map()
+          for (const e of raw) {
+            if (typeof e === "string") {
+              // legacy bare string: a real uuid, or (older) a station name
+              map.set(
+                e,
+                isUuid(e) ? { stationuuid: e } : { stationuuid: e, name: e },
+              )
+            } else if (e && e.stationuuid) {
+              // if the "uuid" is actually a name, surface it as the display name
+              if (!e.name && !isUuid(e.stationuuid)) e.name = e.stationuuid
+              map.set(e.stationuuid, e)
+            }
+          }
+          return map
         } catch (_) {
-          return new Set()
+          return new Map()
         }
       }
 
-      function toggleFavorite(id) {
-        if (!id) return
-        if (favorites.has(id)) favorites.delete(id)
-        else favorites.add(id)
+      function saveFavorites() {
         try {
-          localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favorites]))
+          localStorage.setItem(
+            FAVORITES_KEY,
+            JSON.stringify([...favorites.values()]),
+          )
         } catch (_) {}
+      }
+
+      // Keep only the fields we need to render + replay a station.
+      function stationFields(s) {
+        return {
+          stationuuid: s.stationuuid,
+          name: s.name,
+          url_resolved: s.url_resolved,
+          homepage: s.homepage,
+          country: s.country,
+          bitrate: s.bitrate,
+          tags: s.tags,
+        }
+      }
+
+      // Accepts a full station object or just a uuid string.
+      function toggleFavorite(station) {
+        const id = typeof station === "string" ? station : station?.stationuuid
+        if (!id) return
+        if (favorites.has(id)) {
+          favorites.delete(id)
+        } else {
+          // resolve a full object to store (no cap on favorites)
+          const src =
+            (typeof station === "object" && station) ||
+            history.find((h) => h.stationuuid === id) ||
+            (currentStation?.stationuuid === id ? currentStation : null)
+          favorites.set(id, src ? stationFields(src) : { stationuuid: id })
+        }
+        saveFavorites()
         renderHistory()
         syncFavUI()
       }
@@ -1149,34 +1184,46 @@
         renderHistory()
       }
 
+      // Markup for a single station row (used by both lists).
+      function stationRowHTML(entry) {
+        const id = entry.stationuuid || ""
+        const fav = !!id && favorites.has(id)
+        const safe = escapeHtml(entry.name || "Unknown")
+        const playable = !!(id && entry.url_resolved)
+        const star =
+          `<button class="fav${fav ? " is-fav" : ""}" data-uuid="${escapeHtml(id)}"` +
+          `${id ? "" : " disabled"} aria-pressed="${fav}" aria-label="Toggle favorite" title="Favorite">` +
+          STAR_SVG +
+          `</button>`
+        const name = playable
+          ? `<button class="history-name" data-uuid="${escapeHtml(id)}" title="Play ${safe}">${safe}</button>`
+          : `<span class="history-name">${safe}</span>`
+        return `<p class="history-item">${name}${star}</p>`
+      }
+
       function renderHistory() {
         const el = document.getElementById("history")
-        if (!history.length) {
+        const favList = [...favorites.values()]
+        if (!favList.length && !history.length) {
           el.innerHTML = ""
           return
         }
+        const favSection = favList.length
+          ? `<h2>Favorites</h2>` +
+            `<div class="history-list">` +
+            favList.map(stationRowHTML).join("") +
+            `</div>`
+          : ""
+        const recentSection = history.length
+          ? `<h2 class="recent">Recently played</h2>` +
+            `<div class="history-list">` +
+            history.map(stationRowHTML).join("") +
+            `</div>`
+          : ""
         el.innerHTML =
           `<img class="history-icon" src="svg/vinyl-alt.svg" alt="" draggable="false" />` +
-          `<h2>Recently played</h2>` +
-          `<div class="history-list">` +
-          history
-            .map((entry) => {
-              const id = entry.stationuuid || ""
-              const fav = !!id && favorites.has(id)
-              const safe = escapeHtml(entry.name || "Unknown")
-              const playable = !!(id && entry.url_resolved)
-              const star =
-                `<button class="fav${fav ? " is-fav" : ""}" data-uuid="${escapeHtml(id)}"` +
-                `${id ? "" : " disabled"} aria-pressed="${fav}" aria-label="Toggle favorite" title="Favorite">` +
-                STAR_SVG +
-                `</button>`
-              const name = playable
-                ? `<button class="history-name" data-uuid="${escapeHtml(id)}" title="Play ${safe}">${safe}</button>`
-                : `<span class="history-name">${safe}</span>`
-              return `<p class="history-item">${name}${star}</p>`
-            })
-            .join("") +
-          `</div>`
+          favSection +
+          recentSection
       }
 
       // Delegated history clicks (the list is re-rendered on every change, but
@@ -1189,7 +1236,9 @@
         }
         const name = e.target.closest("button.history-name")
         if (name) {
-          const entry = history.find((h) => h.stationuuid === name.dataset.uuid)
+          const id = name.dataset.uuid
+          const entry =
+            history.find((h) => h.stationuuid === id) || favorites.get(id)
           if (entry) renderStation(entry, { play: true })
         }
       })
@@ -1241,6 +1290,52 @@
           try {
             localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
           } catch (_) {}
+          renderHistory()
+        }
+      }
+
+      // Fetch a single station by its exact uuid (precise, no guessing).
+      async function fetchStationByUuid(uuid) {
+        for (const base of SERVERS) {
+          const list = await fetchJson(`${base}/json/stations/byuuid/${uuid}`)
+          if (Array.isArray(list) && list[0]) return list[0]
+        }
+        return null
+      }
+
+      // Best-effort: upgrade legacy favorites (stored as uuid only) to full
+      // station objects so they show a name and can be replayed.
+      async function backfillFavorites() {
+        let changed = false
+        for (const [key, f] of [...favorites]) {
+          const realUuid = isUuid(f.stationuuid || "")
+          // already complete — nothing to do
+          if (realUuid && f.name && f.url_resolved) continue
+          let s = null
+          if (realUuid) {
+            // real id, missing details → look up by uuid
+            s =
+              history.find((h) => h.stationuuid === f.stationuuid && h.name) ||
+              (await fetchStationByUuid(f.stationuuid))
+          } else {
+            // namelike id (legacy) → resolve by exact name
+            const nm = f.name || key
+            s =
+              history.find(
+                (h) =>
+                  h.stationuuid &&
+                  isUuid(h.stationuuid) &&
+                  (h.name || "").toLowerCase() === nm.toLowerCase(),
+              ) || (await findStationByName(nm))
+          }
+          if (!s) continue
+          // re-key under the real uuid (drops the namelike key if it changed)
+          if (key !== s.stationuuid) favorites.delete(key)
+          favorites.set(s.stationuuid, stationFields(s))
+          changed = true
+        }
+        if (changed) {
+          saveFavorites()
           renderHistory()
         }
       }
@@ -1469,7 +1564,7 @@
           pipWindow.document
             .getElementById("miniFav")
             .addEventListener("click", () => {
-              if (currentStation) toggleFavorite(currentStation.stationuuid)
+              if (currentStation) toggleFavorite(currentStation)
             })
 
           // Volume controls in the PiP mirror the main ones.
@@ -1744,7 +1839,7 @@
       els.vinylArt.addEventListener("click", togglePlay)
       els.nextBtn.addEventListener("click", nextStation)
       els.favBtn.addEventListener("click", () => {
-        if (currentStation) toggleFavorite(currentStation.stationuuid)
+        if (currentStation) toggleFavorite(currentStation)
       })
 
       // ---------- Volume + mute ----------
@@ -1890,8 +1985,9 @@
 
       // Show any history saved from previous sessions.
       renderHistory()
-      // Upgrade old name-only entries to the full format in the background.
+      // Upgrade old entries to the full format in the background.
       backfillHistory()
+      backfillFavorites()
 
       // Load a station so there's something ready — it stays paused until the
       // user clicks the vinyl or the play button.
