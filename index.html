@@ -430,9 +430,16 @@
         transition: opacity 0.2s ease;
       }
       .volume-control:hover .volume-popup,
-      .volume-control:focus-within .volume-popup {
+      .volume-control:focus-within .volume-popup,
+      .volume-control.open .volume-popup {
         opacity: 1;
         pointer-events: auto;
+      }
+      /* Long-press to reveal on touch: don't let the press select text or
+         pop the OS callout menu. */
+      .volume-control button {
+        -webkit-touch-callout: none;
+        user-select: none;
       }
       .volume-popup-inner {
         background: var(--border);
@@ -1903,12 +1910,44 @@
         els.player.volume = parseFloat(els.volume.value)
         if (els.player.volume > 0) els.player.muted = false
       })
-      // Clicking the speaker button toggles mute. Blur afterwards so the
-      // button doesn't keep :focus (which would hold the popup open via
-      // :focus-within even after the pointer leaves).
+      // Speaker button behaviour:
+      //  - short tap/click toggles mute (and blurs so :focus-within doesn't
+      //    keep the popup pinned open on desktop after the pointer leaves)
+      //  - long press reveals the slider on touch devices, which have no
+      //    hover to trigger the popup otherwise. It stays open until you tap
+      //    elsewhere.
+      const volumeControl = els.volumeBtn.closest(".volume-control")
+      let pressTimer = null
+      let longPressed = false
+      const cancelPress = () => clearTimeout(pressTimer)
+      els.volumeBtn.addEventListener("pointerdown", () => {
+        longPressed = false
+        pressTimer = setTimeout(() => {
+          longPressed = true
+          volumeControl.classList.add("open")
+        }, 400)
+      })
+      els.volumeBtn.addEventListener("pointerup", cancelPress)
+      els.volumeBtn.addEventListener("pointerleave", cancelPress)
+      els.volumeBtn.addEventListener("pointercancel", cancelPress)
       els.volumeBtn.addEventListener("click", () => {
+        // Swallow the click that trails a long press so the reveal doesn't
+        // also mute.
+        if (longPressed) {
+          longPressed = false
+          return
+        }
         els.player.muted = !els.player.muted
         els.volumeBtn.blur()
+      })
+      // Tapping outside the control dismisses the revealed slider.
+      document.addEventListener("pointerdown", (e) => {
+        if (
+          volumeControl.classList.contains("open") &&
+          !volumeControl.contains(e.target)
+        ) {
+          volumeControl.classList.remove("open")
+        }
       })
       // Keep the icons in sync with whatever changed the volume/mute state.
       els.player.addEventListener("volumechange", syncVolumeUI)
