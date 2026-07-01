@@ -232,6 +232,29 @@
       .loading:empty {
         display: none;
       }
+      /* animated ellipsis after "connecting" — dots build up one at a time.
+         Fixed-width, left-aligned box so the text doesn't shift as they cycle. */
+      .loading::after {
+        content: "";
+        display: inline-block;
+        width: 1.1em;
+        text-align: left;
+        animation: ellipsis 1.6s steps(1, end) infinite;
+      }
+      @keyframes ellipsis {
+        0% {
+          content: "";
+        }
+        25% {
+          content: ".";
+        }
+        50% {
+          content: "..";
+        }
+        75% {
+          content: "...";
+        }
+      }
 
       /* ---------- Play history ---------- */
       .history {
